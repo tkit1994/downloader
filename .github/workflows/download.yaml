@@ -1,0 +1,57 @@
+name: Download file and upload
+on:
+  push:
+    branches:
+      - master
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install required packages
+        run: |
+          sudo apt update
+          sudo apt install wget ffmpeg gpg
+
+      - name: Import GPG key
+        env:
+          GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --import --pinentry-mode=loopback --passphrase "$PASSWORD"
+
+      - name: Decrypt download script
+        run: |
+          gpg --pinentry-mode=loopback --passphrase  "$PASSWORD" -d --output cmd.sh cmd.sh.asc
+        env:
+          PASSWORD: ${{ secrets.PASSWORD }}
+
+      - name: Run download script
+        run: |
+          mkdir -p $(date --iso-8601)
+          cd $(date --iso-8601)
+          sh ../cmd.sh
+
+      - name: Archive and encrypt downloaded files
+        run: |
+          tar cO $(date --iso-8601) | gpg -e -R "$RECIVER" --trust-model always --output download.tar.gpg
+        env:
+          RECIVER: ${{secrets.RECIVER}}
+
+      - name: Upload file to cloud
+        run: |
+          curl -fsSL git.io/file-transfer | bash
+          ./transfer "$TARGET" --no-progress download.tar.gpg 2>&1 | tee wss.log
+          echo "::warning file=wss.com::$(cat wss.log | grep https)"
+          echo "::set-output name=url::$(cat wss.log | grep https | cut -f3 -d" ")"
+        env:
+          TARGET: arp
+
+      - name: Upload log file
+        uses: actions/upload-artifact@v2
+        with:
+          name: wss.log
+          path: wss.log
