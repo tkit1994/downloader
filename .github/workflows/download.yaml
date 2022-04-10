@@ -55,3 +55,9 @@ jobs:
         with:
           name: wss.log
           path: wss.log
+
+      - name: Upload file to artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: download.tar.gpg
+          path: download.tar.gpg
