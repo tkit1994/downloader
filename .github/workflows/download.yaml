@@ -48,7 +48,7 @@ jobs:
           echo "::warning file=wss.com::$(cat wss.log | grep https)"
           echo "::set-output name=url::$(cat wss.log | grep https | cut -f3 -d" ")"
         env:
-          TARGET: arp
+          TARGET: musetransfer
 
       - name: Upload log file
         uses: actions/upload-artifact@v2
